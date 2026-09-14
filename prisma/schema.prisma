@@ -1,0 +1,170 @@
+// Prisma schema - Checkpoint 2.
+//
+// Wallet address storage convention: all wallet address fields store the
+// LOWERCASE address as the canonical value. Uniqueness/lookups depend on this
+// normalization happening at the application boundary (lib/wallet.ts,
+// Checkpoint 3) before any write or query - Postgres unique constraints are
+// case-sensitive, and a mixed-case vs. lowercase collision must not slip
+// past the "one claim per wallet" guarantee. Checksummed display formatting
+// happens client-side only.
+
+generator client {
+  provider        = "prisma-client-js"
+  // Driver adapters use the WASM query engine bundled inside the npm
+  // package itself, rather than downloading a native binary from
+  // binaries.prisma.sh at install time. Chosen specifically because this
+  // sandbox's network egress blocks that host (see docs/CHECKPOINT.md) -
+  // it also happens to be Prisma's forward-looking direction, so it's not
+  // purely a workaround. Requires PrismaClient to be constructed with a
+  // `@prisma/adapter-pg` adapter (see lib/db.ts).
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (Supabase PgBouncer, port 6543) - used at runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection (port 5432) - used only for migrations.
+  directUrl = env("DIRECT_URL")
+}
+
+enum EligibilityMode {
+  ANY
+  ALL
+}
+
+enum ClaimStatus {
+  CONFIRMED
+}
+
+enum NoncePurpose {
+  AUTH
+  CLAIM
+}
+
+/// One whitelist campaign. Designed as a first-class row (not a singleton)
+/// so multiple campaigns can exist, even though the current UI targets one
+/// active campaign at a time.
+model Campaign {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  name            String
+  eligibilityMode EligibilityMode
+  /// Total number of spots available. Spots remaining is always DERIVED as
+  /// (maxSpots - count of Claim rows for this campaign), never stored as a
+  /// separately-mutated counter - see docs/DECISIONS.md D3.
+  maxSpots        Int
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  collections CampaignCollection[]
+  claims      Claim[]
+
+  @@map("campaigns")
+}
+
+/// One NFT collection that counts toward a campaign's eligibility check.
+/// A campaign with eligibilityMode=ANY requires satisfying >=1 of these;
+/// ALL requires satisfying every one. `minimumHeld` is evaluated per-collection.
+model CampaignCollection {
+  id              String   @id @default(cuid())
+  campaignId      String
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name            String
+  /// Free-form chain identifier (e.g. "ethereum", "base", "polygon"), not an
+  /// enum - new chains must be addable via configuration, not a migration.
+  /// Validated against a supported-chain allowlist in application code
+  /// (Checkpoint 4), not enforced at the DB layer.
+  chain           String
+  contractAddress String
+  minimumHeld     Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  /// Prevents the same contract being configured twice for one campaign
+  /// (which would silently double-count toward ALL-mode eligibility).
+  @@unique([campaignId, chain, contractAddress])
+  @@index([campaignId])
+  @@map("campaign_collections")
+}
+
+/// A recorded, successful claim. Rows are only ever inserted - there is no
+/// partial/pending state, since the claim-recording transaction either fully
+/// succeeds or is rolled back entirely (Checkpoint 5 implements the
+/// transaction; this schema just enforces the invariants it must uphold).
+model Claim {
+  id         String      @id @default(cuid())
+  campaignId String
+  campaign   Campaign    @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+
+  /// The wallet that proved NFT ownership via signature (Checkpoint 3).
+  holderWallet String
+  /// The wallet recorded for the whitelist - may equal holderWallet, is
+  /// never required to hold the NFT itself.
+  destinationWallet String
+
+  /// Which collection(s)/quantities satisfied eligibility, e.g.
+  /// [{ "collectionId": "...", "contractAddress": "0x...", "chain": "base", "heldQuantity": 2 }]
+  /// Stored as JSON rather than a join table because it's a snapshot of the
+  /// eligibility decision at claim time - it must not change retroactively
+  /// if campaign collections are edited later.
+  qualifyingCollections Json
+
+  chain          String
+  status         ClaimStatus @default(CONFIRMED)
+  /// The claim authorization signature (EIP-712), kept for audit purposes.
+  claimSignature String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// THE core anti-duplicate-claim guarantee: a destination wallet can have
+  /// at most one claim row per campaign, enforced by Postgres itself - not
+  /// just application logic. Combined with the transaction in Checkpoint 5
+  /// (which locks the campaign row before counting/inserting), this is what
+  /// makes "never exceed maxSpots" and "one claim per wallet" hold even
+  /// under concurrent requests, retries, or replayed API calls.
+  @@unique([campaignId, destinationWallet])
+  @@index([campaignId])
+  @@index([holderWallet])
+  @@map("claims")
+}
+
+/// A single-use, expiring challenge issued for wallet-signature auth
+/// (purpose=AUTH) or for claim authorization (purpose=CLAIM).
+model AuthNonce {
+  id      String       @id @default(cuid())
+  wallet  String
+  nonce   String
+  purpose NoncePurpose
+
+  expiresAt  DateTime
+  /// NULL = unused. Set exactly once, inside the same transaction that
+  /// verifies the signature, so "consume" and "verify" cannot race.
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([wallet, nonce])
+  @@index([wallet, purpose])
+  @@map("auth_nonces")
+}
+
+/// Admin panel account. Provisioned via a seed script from env vars - there
+/// is no public admin-signup route.
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  /// Bumped to immediately invalidate every outstanding session for this
+  /// admin (see migration 00000000000001_admin_token_version and
+  /// docs/DECISIONS.md D21). Not exposed to any client input - only the
+  /// server increments it, via POST /api/admin/revoke-sessions.
+  tokenVersion Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_users")
+}
+

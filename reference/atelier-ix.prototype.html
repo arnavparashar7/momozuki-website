@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atelier IX - Private Access</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+/* =========================================================
+   DESIGN TOKENS
+   ========================================================= */
+:root{
+  /* color */
+  --bg:            #0B0A08;
+  --bg-raised:     #121110;
+  --bg-raised-2:   #17150F;
+  --hairline:      rgba(242,237,227,0.10);
+  --hairline-strong: rgba(242,237,227,0.20);
+  --ink:           #F1ECE0;
+  --ink-dim:       #9C9686;
+  --ink-faint:     #6A6459;
+  --brass:         #B08D57;
+  --brass-bright:  #CBA875;
+  --brass-dim:     #6E5A38;
+  --sage:          #8C9A7E;
+  --rust:          #A66B58;
+  --overlay:       rgba(8,7,5,0.72);
+
+  /* type */
+  --serif: 'Fraunces', Georgia, serif;
+  --sans:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono:  'IBM Plex Mono', 'SF Mono', monospace;
+
+  /* spacing */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px;
+  --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px; --s-10: 128px;
+
+  /* radius / control sizes */
+  --r-sm: 2px; --r-md: 4px;
+  --h-input: 52px; --h-btn: 52px; --h-btn-sm: 40px;
+
+  /* motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-sm: 180ms; --dur-md: 320ms; --dur-lg: 560ms;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ background:var(--bg); }
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+a{ color:inherit; }
+button{ font-family:inherit; }
+::selection{ background:var(--brass-dim); color:var(--ink); }
+
+/* subtle grain texture on the base background for material depth */
+.grain{
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  opacity:0.035; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:focus-visible{
+  outline:1.5px solid var(--brass-bright);
+  outline-offset:3px;
+}
+
+/* =========================================================
+   TYPE UTILITIES
+   ========================================================= */
+.eyebrow{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.14em;
+  color:var(--brass);
+  text-transform:uppercase;
+}
+.label{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.08em;
+  color:var(--ink-faint);
+  text-transform:uppercase;
+}
+.mono{ font-family:var(--mono); }
+.serif-display{
+  font-family:var(--serif);
+  font-weight:400;
+  font-optical-sizing:auto;
+  letter-spacing:-0.01em;
+}
+
+/* =========================================================
+   LAYOUT SHELL
+   ========================================================= */
+.app{ position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; }
+
+.nav{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: var(--s-5) var(--s-7);
+  border-bottom:1px solid var(--hairline);
+}
+.nav-mark{
+  font-family:var(--serif); font-size:19px; letter-spacing:0.01em; font-weight:500;
+  display:flex; align-items:baseline; gap:8px;
+}
+.nav-mark small{ font-family:var(--mono); font-size:10px; color:var(--ink-faint); letter-spacing:0.1em; }
+.nav-links{ display:flex; align-items:center; gap:var(--s-7); }
+.nav-links a{
+  font-size:13px; color:var(--ink-dim); text-decoration:none;
+  transition:color var(--dur-sm) var(--ease);
+}
+.nav-links a:hover{ color:var(--ink); }
+
+.nav-cta{
+  font-family:var(--sans); font-size:13px; font-weight:500;
+  color:var(--bg); background:var(--ink);
+  padding:11px 20px; border-radius:var(--r-sm);
+  border:none; cursor:pointer;
+  letter-spacing:0.01em;
+  transition:background var(--dur-sm) var(--ease), transform var(--dur-sm) var(--ease);
+}
+.nav-cta:hover{ background:var(--brass-bright); }
+.nav-cta:active{ transform:scale(0.98); }
+.nav-cta.ghost{
+  background:transparent; color:var(--ink); border:1px solid var(--hairline-strong);
+}
+.nav-cta.ghost:hover{ border-color:var(--brass); color:var(--brass-bright); background:transparent; }
+
+.wallet-chip{
+  display:flex; align-items:center; gap:10px;
+  font-family:var(--mono); font-size:12.5px; color:var(--ink);
+  border:1px solid var(--hairline-strong); border-radius:var(--r-sm);
+  padding:9px 14px; background:var(--bg-raised); cursor:pointer;
+}
+.wallet-chip .dot{ width:6px; height:6px; border-radius:50%; background:var(--sage); }
+
+@media (max-width:720px){
+  .nav{ padding: var(--s-4) var(--s-4); }
+  .nav-links{ display:none; }
+}
+
+/* =========================================================
+   MAIN STAGE - swaps between public screens
+   ========================================================= */
+.stage{ flex:1; display:flex; flex-direction:column; }
+.screen{
+  animation: rise var(--dur-lg) var(--ease);
+}
+@keyframes rise{
+  from{ opacity:0; transform:translateY(10px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+/* ---------------- LANDING / HERO ---------------- */
+.hero{
+  display:grid; grid-template-columns: 1.15fr 0.85fr;
+  gap: var(--s-9);
+  padding: var(--s-9) var(--s-7) var(--s-8);
+  max-width:1400px; margin:0 auto; width:100%;
+  align-items:end;
+}
+.hero-eyebrow{ margin-bottom:var(--s-4); }
+.hero h1{
+  font-size:clamp(40px, 6vw, 84px);
+  line-height:0.98;
+  font-weight:400;
+}
+.hero h1 em{ font-style:italic; color:var(--brass-bright); font-weight:400; }
+.hero-sub{
+  margin-top:var(--s-5);
+  max-width:46ch;
+  font-size:16px; line-height:1.65;
+  color:var(--ink-dim);
+}
+.hero-actions{ margin-top:var(--s-6); display:flex; align-items:center; gap:var(--s-5); flex-wrap:wrap; }
+.btn-primary{
+  height:var(--h-btn); padding:0 30px;
+  background:var(--ink); color:var(--bg);
+  border:none; border-radius:var(--r-sm);
+  font-size:14px; font-weight:500; letter-spacing:0.01em;
+  cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  transition:background var(--dur-sm) var(--ease), transform var(--dur-sm) var(--ease);
+  min-width:200px;
+}
+.btn-primary:hover{ background:var(--brass-bright); }
+.btn-primary:active{ transform:scale(0.985); }
+.btn-primary:disabled{ background:var(--bg-raised-2); color:var(--ink-faint); cursor:not-allowed; }
+
+.btn-secondary{
+  height:var(--h-btn); padding:0 28px;
+  background:transparent; color:var(--ink);
+  border:1px solid var(--hairline-strong); border-radius:var(--r-sm);
+  font-size:14px; font-weight:500;
+  cursor:pointer;
+  transition:border-color var(--dur-sm) var(--ease), color var(--dur-sm) var(--ease);
+}
+.btn-secondary:hover{ border-color:var(--brass); color:var(--brass-bright); }
+
+.hero-meta{ font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:0.03em; }
+
+/* availability counter - the hero's memorable element */
+.counter-block{
+  border-left:1px solid var(--hairline-strong);
+  padding-left:var(--s-6);
+  justify-self:end;
+  text-align:right;
+}
+.counter-num{
+  font-family:var(--serif); font-weight:300; font-size:clamp(72px, 9vw, 140px);
+  line-height:0.9; font-variant-numeric: tabular-nums;
+  color:var(--ink);
+  transition: opacity var(--dur-md) var(--ease);
+}
+.counter-num.tick{ animation: tick-swap 640ms var(--ease); }
+@keyframes tick-swap{
+  0%{ opacity:1; transform:translateY(0); }
+  35%{ opacity:0; transform:translateY(-8px); }
+  36%{ transform:translateY(8px); }
+  100%{ opacity:1; transform:translateY(0); }
+}
+.counter-label{ margin-top:var(--s-2); }
+.counter-of{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:var(--s-1); }
+
+@media (max-width: 900px){
+  .hero{ grid-template-columns:1fr; gap:var(--s-8); padding:var(--s-8) var(--s-4); }
+  .counter-block{ justify-self:start; text-align:left; border-left:none; border-top:1px solid var(--hairline-strong); padding-left:0; padding-top:var(--s-5); }
+}
+
+/* ---------------- details strip ---------------- */
+.details{
+  border-top:1px solid var(--hairline);
+  max-width:1400px; margin:0 auto; width:100%;
+  padding: var(--s-8) var(--s-7);
+  display:grid; grid-template-columns: repeat(3, 1fr); gap:var(--s-8);
+}
+.detail-item .label{ margin-bottom:var(--s-3); }
+.detail-item p{ font-size:14.5px; color:var(--ink-dim); line-height:1.7; max-width:38ch; }
+.detail-item .figure{ font-family:var(--serif); font-size:28px; margin-bottom:var(--s-2); }
+@media (max-width: 900px){
+  .details{ grid-template-columns:1fr; padding: var(--s-7) var(--s-4); gap:var(--s-6); }
+}
+
+/* ---------------- FOCUS PANEL (used by all flow states after connect) ---------------- */
+.focus-wrap{
+  flex:1; display:flex; align-items:center; justify-content:center;
+  padding: var(--s-8) var(--s-4);
+}
+.panel{
+  width:100%; max-width:460px;
+  border:1px solid var(--hairline-strong);
+  background:var(--bg-raised);
+  border-radius:var(--r-md);
+  padding: var(--s-7);
+}
+.panel-header{ margin-bottom:var(--s-6); }
+.panel-header .eyebrow{ display:block; margin-bottom:var(--s-3); }
+.panel-header h2{ font-family:var(--serif); font-size:26px; font-weight:400; }
+.panel-header p{ margin-top:var(--s-3); color:var(--ink-dim); font-size:14px; line-height:1.65; }
+
+.row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: var(--s-4) 0;
+  border-bottom:1px solid var(--hairline);
+}
+.row:last-child{ border-bottom:none; }
+.row .label{ margin-bottom:4px; }
+.row .value{ font-family:var(--mono); font-size:13.5px; }
+.row .value.big{ font-family:var(--serif); font-size:19px; }
+
+/* verifying state */
+.verify-visual{
+  display:flex; align-items:center; justify-content:center;
+  height:120px; margin-bottom:var(--s-6);
+  position:relative;
+}
+.ring{
+  width:64px; height:64px; border-radius:50%;
+  border:1px solid var(--hairline-strong);
+  position:relative;
+}
+.ring::before{
+  content:''; position:absolute; inset:-1px;
+  border-radius:50%;
+  border:1px solid transparent;
+  border-top-color:var(--brass);
+  animation: spin 1.4s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.verify-status{ text-align:center; }
+.verify-status h2{ font-family:var(--serif); font-size:22px; font-weight:400; margin-bottom:var(--s-2); }
+.verify-status p{ color:var(--ink-dim); font-size:14px; }
+
+/* badges */
+.badge{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--mono); font-size:11px; letter-spacing:0.06em;
+  padding:6px 12px; border-radius:100px; text-transform:uppercase;
+}
+.badge .dot{ width:6px; height:6px; border-radius:50%; }
+.badge.ok{ background:rgba(140,154,126,0.12); color:var(--sage); }
+.badge.ok .dot{ background:var(--sage); }
+.badge.no{ background:rgba(166,107,88,0.12); color:var(--rust); }
+.badge.no .dot{ background:var(--rust); }
+.badge.neutral{ background:rgba(176,141,87,0.12); color:var(--brass-bright); }
+.badge.neutral .dot{ background:var(--brass); }
+
+/* form */
+.field{ margin-bottom:var(--s-5); }
+.field label{ display:block; font-family:var(--mono); font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:var(--s-2); }
+.field input{
+  width:100%; height:var(--h-input);
+  background:var(--bg); border:1px solid var(--hairline-strong);
+  border-radius:var(--r-sm); color:var(--ink);
+  font-family:var(--mono); font-size:14px;
+  padding:0 var(--s-4);
+  transition:border-color var(--dur-sm) var(--ease);
+}
+.field input::placeholder{ color:var(--ink-faint); }
+.field input:focus{ border-color:var(--brass); outline:none; }
+.field input.error{ border-color:var(--rust); }
+.field .helper{ margin-top:var(--s-2); font-size:12.5px; color:var(--ink-faint); line-height:1.6; }
+.field .helper.error{ color:var(--rust); }
+
+.note-box{
+  border-left:2px solid var(--brass-dim);
+  background:var(--bg-raised-2);
+  padding: var(--s-4) var(--s-5);
+  font-size:13px; line-height:1.7; color:var(--ink-dim);
+  margin-bottom:var(--s-6);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+}
+.note-box strong{ color:var(--ink); font-weight:500; }
+
+.panel-actions{ margin-top:var(--s-6); display:flex; flex-direction:column; gap:var(--s-3); }
+.panel-actions .btn-primary, .panel-actions .btn-secondary{ width:100%; }
+.gas-note{ text-align:center; font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:0.03em; }
+
+/* success visual */
+.success-visual{
+  display:flex; align-items:center; justify-content:center; height:140px; margin-bottom:var(--s-6); position:relative;
+}
+.success-ring{
+  width:80px; height:80px; border-radius:50%; border:1px solid var(--brass);
+  display:flex; align-items:center; justify-content:center;
+  animation: ring-expand 900ms var(--ease);
+  position:relative;
+}
+.success-ring::before{
+  content:''; position:absolute; inset:-14px; border-radius:50%;
+  border:1px solid var(--hairline-strong);
+  animation: ring-expand 900ms var(--ease) 120ms backwards;
+}
+.success-ring::after{
+  content:''; position:absolute; inset:-30px; border-radius:50%;
+  border:1px solid var(--hairline);
+  animation: ring-expand 900ms var(--ease) 240ms backwards;
+}
+@keyframes ring-expand{ from{ opacity:0; transform:scale(0.85);} to{ opacity:1; transform:scale(1);} }
+.success-mark{ font-family:var(--serif); font-size:30px; color:var(--brass-bright); }
+
+/* sold out */
+.sold-visual{ text-align:center; padding: var(--s-6) 0; }
+.sold-visual .counter-num{ font-size:64px; color:var(--ink-faint); }
+
+/* wallet modal */
+.modal-overlay{
+  position:fixed; inset:0; background:var(--overlay);
+  display:flex; align-items:center; justify-content:center;
+  z-index:50; padding:var(--s-4);
+  backdrop-filter: blur(3px);
+  animation: fade-in var(--dur-md) var(--ease);
+}
+@keyframes fade-in{ from{ opacity:0;} to{ opacity:1;} }
+.modal{
+  width:100%; max-width:400px;
+  background:var(--bg-raised); border:1px solid var(--hairline-strong);
+  border-radius:var(--r-md);
+  padding: var(--s-6);
+  animation: modal-in var(--dur-md) var(--ease);
+}
+@keyframes modal-in{ from{ opacity:0; transform:translateY(14px) scale(0.98);} to{ opacity:1; transform:translateY(0) scale(1);} }
+.modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--s-5); }
+.modal-head h3{ font-family:var(--serif); font-size:19px; font-weight:400; }
+.modal-close{
+  width:28px; height:28px; border-radius:50%; border:1px solid var(--hairline-strong);
+  background:transparent; color:var(--ink-dim); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:15px;
+}
+.modal-close:hover{ color:var(--ink); border-color:var(--brass); }
+.wallet-opt{
+  width:100%; display:flex; align-items:center; gap:var(--s-4);
+  padding:14px var(--s-4);
+  background:transparent; border:1px solid var(--hairline);
+  border-radius:var(--r-sm); color:var(--ink); cursor:pointer;
+  margin-bottom:var(--s-3); text-align:left;
+  transition:border-color var(--dur-sm) var(--ease), background var(--dur-sm) var(--ease);
+  font-size:14px;
+}
+.wallet-opt:hover{ border-color:var(--brass); background:var(--bg-raised-2); }
+.wallet-opt .mark{
+  width:32px; height:32px; border-radius:var(--r-sm); border:1px solid var(--hairline-strong);
+  display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; color:var(--ink-dim); flex:none;
+}
+.wallet-opt .name{ flex:1; }
+.wallet-opt .sub{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; }
+.modal-foot{ margin-top:var(--s-5); text-align:center; font-size:12px; color:var(--ink-faint); }
+
+/* toast */
+.toast{
+  position:fixed; bottom:var(--s-6); left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--ink); color:var(--bg); padding:14px 22px; border-radius:var(--r-sm);
+  font-size:13px; font-weight:500; z-index:80; opacity:0; pointer-events:none;
+  transition: all var(--dur-md) var(--ease);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* footer */
+.foot{
+  border-top:1px solid var(--hairline);
+  padding: var(--s-6) var(--s-7);
+  display:flex; justify-content:space-between; align-items:center;
+  max-width:1400px; margin:0 auto; width:100%;
+}
+.foot span{ font-size:12px; color:var(--ink-faint); }
+.foot a{ font-size:12px; color:var(--ink-faint); text-decoration:none; }
+.foot a:hover{ color:var(--brass-bright); }
+@media (max-width:720px){ .foot{ flex-direction:column; gap:var(--s-3); padding:var(--s-5) var(--s-4); align-items:flex-start; } }
+
+/* =========================================================
+   ADMIN DASHBOARD
+   ========================================================= */
+.admin{ display:none; }
+.admin.active{ display:block; }
+.admin .nav{ padding: var(--s-4) var(--s-7); }
+.admin-body{ max-width:1400px; margin:0 auto; padding: var(--s-7); }
+.admin-title-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--s-7); flex-wrap:wrap; gap:var(--s-4); }
+.admin-title-row h1{ font-family:var(--serif); font-size:30px; font-weight:400; }
+.admin-title-row p{ color:var(--ink-dim); font-size:13.5px; margin-top:4px; }
+
+.metric-grid{
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:1px;
+  background:var(--hairline); border:1px solid var(--hairline);
+  margin-bottom:var(--s-7);
+}
+.metric-card{ background:var(--bg-raised); padding:var(--s-6); }
+.metric-card .label{ margin-bottom:var(--s-3); }
+.metric-card .value{ font-family:var(--serif); font-size:38px; font-weight:400; }
+.metric-card .value small{ font-family:var(--sans); font-size:14px; color:var(--ink-faint); font-weight:400; }
+.metric-card .delta{ margin-top:var(--s-2); font-family:var(--mono); font-size:11.5px; color:var(--sage); }
+@media (max-width:900px){ .metric-grid{ grid-template-columns:repeat(2,1fr); } }
+
+.toolbar{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--s-4);
+  margin-bottom:var(--s-4); flex-wrap:wrap;
+}
+.search-input{
+  flex:1; min-width:220px; height:44px;
+  background:var(--bg-raised); border:1px solid var(--hairline-strong);
+  border-radius:var(--r-sm); padding:0 var(--s-4); color:var(--ink);
+  font-size:13.5px;
+}
+.search-input::placeholder{ color:var(--ink-faint); }
+.filter-bar{ display:flex; gap:var(--s-2); }
+.chip-select{
+  height:44px; padding:0 var(--s-4);
+  background:var(--bg-raised); border:1px solid var(--hairline-strong); border-radius:var(--r-sm);
+  color:var(--ink-dim); font-size:12.5px; font-family:var(--mono); cursor:pointer;
+}
+.export-group{ display:flex; gap:var(--s-2); }
+.btn-export{
+  height:44px; padding:0 18px; background:transparent; border:1px solid var(--hairline-strong);
+  border-radius:var(--r-sm); color:var(--ink-dim); font-size:12.5px; cursor:pointer; font-family:var(--mono);
+}
+.btn-export:hover{ border-color:var(--brass); color:var(--brass-bright); }
+
+.table-wrap{ border:1px solid var(--hairline); border-radius:var(--r-md); overflow:hidden; margin-bottom:var(--s-8); }
+table{ width:100%; border-collapse:collapse; }
+thead th{
+  text-align:left; padding:14px var(--s-4);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase;
+  color:var(--ink-faint); background:var(--bg-raised-2); border-bottom:1px solid var(--hairline);
+}
+tbody td{
+  padding:14px var(--s-4); font-size:13px; border-bottom:1px solid var(--hairline);
+  font-family:var(--mono); color:var(--ink-dim);
+}
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr:hover{ background:var(--bg-raised); }
+.chain-pill{
+  display:inline-block; font-family:var(--mono); font-size:10.5px; padding:3px 9px;
+  border:1px solid var(--hairline-strong); border-radius:100px; color:var(--ink-dim);
+}
+.table-scroll{ overflow-x:auto; }
+
+.config-grid{ display:grid; grid-template-columns:1fr 1fr; gap:var(--s-6); }
+.config-card{ border:1px solid var(--hairline); border-radius:var(--r-md); padding:var(--s-6); background:var(--bg-raised); }
+.config-card h3{ font-family:var(--serif); font-size:18px; font-weight:400; margin-bottom:var(--s-4); }
+.config-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--hairline); font-size:13px; }
+.config-row:last-child{ border-bottom:none; }
+.config-row .k{ color:var(--ink-faint); }
+.config-row .v{ font-family:var(--mono); color:var(--ink); }
+@media (max-width:900px){ .config-grid{ grid-template-columns:1fr; } }
+
+/* =========================================================
+   PROTOTYPE CONTROLS (review aid - not part of product UI)
+   ========================================================= */
+.proto{
+  position:fixed; bottom:var(--s-5); right:var(--s-5); z-index:90;
+  font-family:var(--mono);
+}
+.proto-toggle{
+  width:40px; height:40px; border-radius:50%;
+  background:var(--bg-raised); border:1px solid var(--hairline-strong);
+  color:var(--ink-dim); cursor:pointer; font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+}
+.proto-toggle:hover{ border-color:var(--brass); color:var(--brass-bright); }
+.proto-panel{
+  display:none; position:absolute; bottom:50px; right:0;
+  background:var(--bg-raised); border:1px solid var(--hairline-strong); border-radius:var(--r-md);
+  padding:var(--s-4); width:220px; max-height:70vh; overflow-y:auto;
+}
+.proto-panel.open{ display:block; }
+.proto-panel .ptitle{ font-size:10px; letter-spacing:0.08em; color:var(--ink-faint); text-transform:uppercase; margin-bottom:var(--s-3); }
+.proto-panel button{
+  display:block; width:100%; text-align:left; background:transparent; border:none;
+  color:var(--ink-dim); font-family:var(--sans); font-size:12.5px; padding:7px 6px; border-radius:3px; cursor:pointer;
+}
+.proto-panel button:hover{ background:var(--bg-raised-2); color:var(--ink); }
+.proto-panel button.current{ color:var(--brass-bright); }
+.proto-panel hr{ border:none; border-top:1px solid var(--hairline); margin:var(--s-3) 0; }
+
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="app" id="app">
+
+  <!-- =========================== PUBLIC SITE =========================== -->
+  <div id="publicSite">
+
+    <nav class="nav">
+      <div class="nav-mark">Atelier IX <small>COLLECTORS' ALLOCATION</small></div>
+      <div class="nav-links">
+        <a href="#details">About</a>
+        <a href="#details">Details</a>
+      </div>
+      <div id="navAction"></div>
+    </nav>
+
+    <div class="stage" id="stage"><!-- screens injected here --></div>
+
+    <div id="detailsAnchor" class="details" id="details">
+      <div class="detail-item">
+        <div class="label">The Collection</div>
+        <p>Atelier IX is a closed circle of collectors granted early standing in every release the studio produces. Allocation is verified by wallet, not by application.</p>
+      </div>
+      <div class="detail-item">
+        <div class="figure">333</div>
+        <p>Total spots in this allocation window. Each qualifying wallet may claim once, regardless of how many pieces it holds.</p>
+      </div>
+      <div class="detail-item">
+        <div class="label">Requirement</div>
+        <p>Hold at least one piece from the Atelier IX genesis collection at time of verification. No transaction or gas is required to claim.</p>
+      </div>
+    </div>
+
+    <div class="foot">
+      <span>© Atelier IX. Allocation window closes when spots are exhausted.</span>
+      <a href="#" id="adminLink">Admin Console →</a>
+    </div>
+  </div>
+
+  <!-- =========================== ADMIN DASHBOARD =========================== -->
+  <div id="admin" class="admin">
+    <nav class="nav">
+      <div class="nav-mark">Atelier IX <small>OPERATIONS CONSOLE</small></div>
+      <div class="nav-links"><a href="#" id="backToSite">← Back to site</a></div>
+      <div class="wallet-chip"><span class="dot"></span> ops.atelier.eth</div>
+    </nav>
+    <div class="admin-body">
+      <div class="admin-title-row">
+        <div>
+          <h1>Allocation Overview</h1>
+          <p>Atelier IX - Genesis Whitelist Campaign</p>
+        </div>
+        <div class="export-group">
+          <button class="btn-export" id="exportCsv">Export CSV</button>
+          <button class="btn-export" id="exportJson">Export JSON</button>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="label">Total Allocation</div>
+          <div class="value">333</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Claimed</div>
+          <div class="value" id="mClaimed">206</div>
+          <div class="delta">+4 in last hour</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Remaining</div>
+          <div class="value" id="mRemaining">127</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Claim Rate</div>
+          <div class="value" id="mRate">61.9<small>%</small></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <input class="search-input" placeholder="Search by wallet, claim ID…" />
+        <div class="filter-bar">
+          <select class="chip-select"><option>All chains</option><option>Ethereum</option><option>Base</option></select>
+          <select class="chip-select"><option>Sort: Newest</option><option>Sort: Oldest</option></select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Claim ID</th><th>Holder Wallet</th><th>Destination Wallet</th><th>Collection</th><th>Chain</th><th>Claimed At</th>
+            </tr>
+          </thead>
+          <tbody id="claimTable"></tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-card">
+          <h3>Campaign Configuration</h3>
+          <div class="config-row"><span class="k">Campaign name</span><span class="v">Atelier IX - Genesis</span></div>
+          <div class="config-row"><span class="k">Total allocation</span><span class="v">333</span></div>
+          <div class="config-row"><span class="k">Per‑wallet limit</span><span class="v">1</span></div>
+          <div class="config-row"><span class="k">Verification method</span><span class="v">ERC‑721 balance ≥ 1</span></div>
+          <div class="config-row"><span class="k">Claim type</span><span class="v">Off‑chain signature</span></div>
+        </div>
+        <div class="config-card">
+          <h3>Qualifying Collection</h3>
+          <div class="config-row"><span class="k">Collection</span><span class="v">Atelier IX Genesis</span></div>
+          <div class="config-row"><span class="k">Contract</span><span class="v">0x4F2A…9C31</span></div>
+          <div class="config-row"><span class="k">Chain</span><span class="v">Ethereum</span></div>
+          <div class="config-row"><span class="k">Snapshot</span><span class="v">Live balance</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Wallet connect modal -->
+<div class="modal-overlay" id="modalOverlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Connect wallet</h3>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <button class="wallet-opt" data-wallet="MetaMask"><span class="mark">MM</span><span class="name">MetaMask<div class="sub">Browser extension</div></span></button>
+    <button class="wallet-opt" data-wallet="Ledger"><span class="mark">LG</span><span class="name">Ledger<div class="sub">Hardware wallet</div></span></button>
+    <button class="wallet-opt" data-wallet="WalletConnect"><span class="mark">WC</span><span class="name">WalletConnect<div class="sub">Mobile & desktop</div></span></button>
+    <button class="wallet-opt" data-wallet="Coinbase"><span class="mark">CB</span><span class="name">Coinbase Wallet<div class="sub">Browser & mobile</div></span></button>
+    <div class="modal-foot">By connecting, you agree the wallet is used only to verify collection ownership.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Prototype review controls -->
+<div class="proto">
+  <div class="proto-panel" id="protoPanel">
+    <div class="ptitle">Preview a state</div>
+    <button data-jump="landing">Landing</button>
+    <button data-jump="verifying-eligible">Verifying → Eligible</button>
+    <button data-jump="verifying-ineligible">Verifying → Ineligible</button>
+    <button data-jump="eligible">Eligible</button>
+    <button data-jump="ineligible">Ineligible</button>
+    <button data-jump="destination">Destination wallet</button>
+    <button data-jump="summary">Claim summary</button>
+    <button data-jump="success">Success</button>
+    <button data-jump="already">Already claimed</button>
+    <button data-jump="soldout">Sold out</button>
+    <hr>
+    <button data-jump="admin">Admin console</button>
+  </div>
+  <button class="proto-toggle" id="protoToggle" aria-label="Preview states">⚙</button>
+</div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const navAction = document.getElementById('navAction');
+  const toastEl = document.getElementById('toast');
+  const modalOverlay = document.getElementById('modalOverlay');
+
+  let SPOTS_TOTAL = 333;
+  let spotsRemaining = 333;
+  let connectedWallet = null;      // e.g. "0x1F3a...9c2E"
+  let connectedWalletType = null;  // "Ledger" etc
+  let destinationWallet = null;
+  let hasClaimedBefore = false;    // simulate repeat-visit check
+
+  function short(addr){ return addr.slice(0,6) + '…' + addr.slice(-4); }
+  function randHex(n){ let s=''; const chars='0123456789ABCDEF'; for(let i=0;i<n;i++) s+=chars[Math.floor(Math.random()*16)]; return s; }
+  function fakeAddr(){ return '0x' + randHex(4) + randHex(30) + randHex(4); }
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> toastEl.classList.remove('show'), 2400);
+  }
+
+  function renderNavAction(){
+    if (connectedWallet){
+      navAction.innerHTML = `<div class="wallet-chip"><span class="dot"></span>${short(connectedWallet)}</div>`;
+    } else {
+      navAction.innerHTML = `<button class="nav-cta" id="connectBtn">Connect Wallet</button>`;
+      document.getElementById('connectBtn').addEventListener('click', openModal);
+    }
+  }
+
+  function openModal(){ modalOverlay.style.display = 'flex'; }
+  function closeModal(){ modalOverlay.style.display = 'none'; }
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e)=>{ if(e.target === modalOverlay) closeModal(); });
+
+  document.querySelectorAll('.wallet-opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      connectedWalletType = btn.dataset.wallet;
+      connectedWallet = fakeAddr();
+      closeModal();
+      renderNavAction();
+      showVerifying();
+    });
+  });
+
+  /* ---------------- SCREEN: LANDING ---------------- */
+  function showLanding(){
+    stage.innerHTML = `
+      <div class="screen hero">
+        <div>
+          <div class="eyebrow hero-eyebrow">Private Access</div>
+          <h1 class="serif-display">Access,<br><em>reserved.</em></h1>
+          <p class="hero-sub">Verify your Atelier IX collection ownership and secure your place in the next allocation. One claim per wallet, no transaction required.</p>
+          <div class="hero-actions">
+            <button class="btn-primary" id="heroConnect">Connect Wallet</button>
+            <span class="hero-meta">Verification takes under a minute</span>
+          </div>
+        </div>
+        <div class="counter-block">
+          <div class="counter-num" id="counterNum">${spotsRemaining}</div>
+          <div class="label counter-label">Spots Remaining</div>
+          <div class="counter-of">of ${SPOTS_TOTAL} total</div>
+        </div>
+      </div>
+    `;
+    document.getElementById('heroConnect').addEventListener('click', openModal);
+    renderNavAction();
+  }
+
+  /* ---------------- SCREEN: VERIFYING ---------------- */
+  function showVerifying(forceOutcome){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen" style="text-align:center;">
+        <div class="verify-visual"><div class="ring"></div></div>
+        <div class="verify-status">
+          <h2>Verifying access</h2>
+          <p>Checking your collection holdings on ${connectedWalletType || 'your wallet'}…</p>
+        </div>
+      </div></div>
+    `;
+    const eligible = forceOutcome !== undefined ? forceOutcome : Math.random() > 0.3;
+    setTimeout(()=>{ eligible ? showEligible() : showIneligible(); }, 1600);
+  }
+
+  /* ---------------- SCREEN: ELIGIBLE ---------------- */
+  function showEligible(){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen">
+        <div class="panel-header" style="text-align:center;">
+          <span class="badge ok" style="margin:0 auto var(--s-4);"><span class="dot"></span>Access verified</span>
+          <h2>You hold the required collection.</h2>
+        </div>
+        <div class="row">
+          <div><div class="label">Qualifying Collection</div><div class="value big">Atelier IX Genesis</div></div>
+        </div>
+        <div class="row">
+          <div><div class="label">Connected Wallet</div><div class="value">${short(connectedWallet)}</div></div>
+        </div>
+        <div class="row">
+          <div><div class="label">NFT Balance</div><div class="value">3</div></div>
+        </div>
+        <div class="row">
+          <div><div class="label">Spot Reserved For Claim</div><div class="value">${spotsRemaining} spots remaining</div></div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn-primary" id="toDestination">Continue to destination wallet</button>
+        </div>
+      </div></div>
+    `;
+    document.getElementById('toDestination').addEventListener('click', showDestination);
+  }
+
+  /* ---------------- SCREEN: INELIGIBLE ---------------- */
+  function showIneligible(){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen" style="text-align:center;">
+        <span class="badge no" style="margin:0 auto var(--s-5);"><span class="dot"></span>Access unavailable</span>
+        <h2 class="serif-display" style="font-size:24px; margin-bottom:var(--s-3);">This wallet does not currently meet the collection requirements.</h2>
+        <p style="color:var(--ink-dim); font-size:14px; margin-bottom:var(--s-6);">Atelier IX access requires holding at least one piece from the genesis collection. If you believe this is incorrect, try a different wallet.</p>
+        <div class="panel-actions">
+          <button class="btn-secondary" id="tryAnother">Connect another wallet</button>
+        </div>
+      </div></div>
+    `;
+    document.getElementById('tryAnother').addEventListener('click', ()=>{
+      connectedWallet = null; connectedWalletType = null;
+      renderNavAction();
+      openModal();
+    });
+  }
+
+  /* ---------------- SCREEN: DESTINATION WALLET ---------------- */
+  function showDestination(){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen">
+        <div class="panel-header">
+          <span class="eyebrow">Step 2 of 2</span>
+          <h2>Destination wallet</h2>
+        </div>
+        <div class="note-box">Your connected wallet is used only to verify collection ownership. You may designate a <strong>different wallet</strong> to receive your whitelist allocation - useful if your NFT sits in cold storage.</div>
+        <div class="field">
+          <label for="destInput">Destination wallet</label>
+          <input id="destInput" type="text" placeholder="0x..." value="${connectedWallet}" />
+          <div class="helper" id="destHelper">This is the wallet that will be recorded for the whitelist. Defaults to your connected wallet.</div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn-primary" id="destContinue">Continue</button>
+        </div>
+      </div></div>
+    `;
+    const input = document.getElementById('destInput');
+    const helper = document.getElementById('destHelper');
+    document.getElementById('destContinue').addEventListener('click', ()=>{
+      const val = input.value.trim();
+      const valid = /^0x[a-fA-F0-9]{6,40}$/.test(val);
+      if (!valid){
+        input.classList.add('error');
+        helper.classList.add('error');
+        helper.textContent = 'Enter a valid wallet address to continue.';
+        return;
+      }
+      destinationWallet = val;
+      showSummary();
+    });
+  }
+
+  /* ---------------- SCREEN: CLAIM SUMMARY ---------------- */
+  function showSummary(){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen">
+        <div class="panel-header">
+          <span class="eyebrow">Review</span>
+          <h2>Confirm your claim</h2>
+        </div>
+        <div class="row"><div><div class="label">Verified Wallet</div><div class="value">${short(connectedWallet)}</div></div></div>
+        <div class="row"><div><div class="label">Destination Wallet</div><div class="value">${short(destinationWallet)}</div></div></div>
+        <div class="row"><div><div class="label">Allocation</div><div class="value">1 spot</div></div></div>
+        <div class="panel-actions">
+          <button class="btn-primary" id="claimBtn">Claim Spot</button>
+          <div class="gas-note">Signature only · No gas required</div>
+        </div>
+      </div></div>
+    `;
+    document.getElementById('claimBtn').addEventListener('click', ()=>{
+      const btn = document.getElementById('claimBtn');
+      btn.disabled = true; btn.textContent = 'Awaiting signature…';
+      setTimeout(()=>{
+        spotsRemaining = Math.max(0, spotsRemaining - 1);
+        hasClaimedBefore = true;
+        showSuccess();
+      }, 1100);
+    });
+  }
+
+  /* ---------------- SCREEN: SUCCESS ---------------- */
+  function showSuccess(){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen" style="text-align:center;">
+        <div class="success-visual"><div class="success-ring"><span class="success-mark">✓</span></div></div>
+        <h2 class="serif-display" style="font-size:26px; margin-bottom:var(--s-2);">Access confirmed.</h2>
+        <p style="color:var(--ink-dim); font-size:14px; margin-bottom:var(--s-6);">Your place has been secured.</p>
+        <div class="row"><div><div class="label">Destination Wallet</div><div class="value">${short(destinationWallet)}</div></div></div>
+        <div class="row"><div><div class="label">Allocation</div><div class="value">1 spot</div></div></div>
+        <div class="row"><div><div class="label">Remaining</div><div class="value">${spotsRemaining}</div></div></div>
+        <div class="panel-actions">
+          <button class="btn-secondary" id="backHome">Return to overview</button>
+        </div>
+      </div></div>
+    `;
+    document.getElementById('backHome').addEventListener('click', showLanding);
+  }
+
+  /* ---------------- SCREEN: ALREADY CLAIMED ---------------- */
+  function showAlreadyClaimed(){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen" style="text-align:center;">
+        <span class="badge neutral" style="margin:0 auto var(--s-5);"><span class="dot"></span>Already claimed</span>
+        <h2 class="serif-display" style="font-size:24px; margin-bottom:var(--s-3);">This wallet has already secured its allocation.</h2>
+        <div class="row"><div><div class="label">Destination Wallet</div><div class="value">${short(destinationWallet || fakeAddr())}</div></div></div>
+        <div class="panel-actions">
+          <button class="btn-secondary" id="resetFlow">Connect a different wallet</button>
+        </div>
+      </div></div>
+    `;
+    document.getElementById('resetFlow').addEventListener('click', ()=>{
+      connectedWallet = null; connectedWalletType = null;
+      renderNavAction(); showLanding();
+    });
+  }
+
+  /* ---------------- SCREEN: SOLD OUT ---------------- */
+  function showSoldOut(){
+    stage.innerHTML = `
+      <div class="focus-wrap"><div class="panel screen" style="text-align:center;">
+        <div class="sold-visual">
+          <div class="counter-num">0</div>
+          <div class="label counter-label" style="margin-top:8px;">Spots Remaining</div>
+        </div>
+        <h2 class="serif-display" style="font-size:24px; margin: var(--s-4) 0 var(--s-3);">Whitelist fully claimed.</h2>
+        <p style="color:var(--ink-dim); font-size:14px;">The allocation has been fully claimed. Follow Atelier IX for news on future releases.</p>
+      </div></div>
+    `;
+  }
+
+  /* ---------------- init ---------------- */
+  renderNavAction();
+  showLanding();
+
+  document.getElementById('adminLink').addEventListener('click', (e)=>{ e.preventDefault(); showAdmin(); });
+  document.getElementById('backToSite').addEventListener('click', (e)=>{ e.preventDefault(); hideAdmin(); });
+
+  function showAdmin(){
+    document.getElementById('publicSite').style.display = 'none';
+    document.getElementById('admin').classList.add('active');
+  }
+  function hideAdmin(){
+    document.getElementById('admin').classList.remove('active');
+    document.getElementById('publicSite').style.display = 'block';
+  }
+
+  /* ---------------- admin table data ---------------- */
+  const collections = ['Atelier IX Genesis'];
+  const chains = ['Ethereum','Base'];
+  function buildRows(n){
+    let rows = '';
+    for (let i=0;i<n;i++){
+      const id = 'CLM-' + String(300 - i).padStart(4,'0');
+      const h = fakeAddr(), d = Math.random() > 0.7 ? fakeAddr() : h;
+      const chain = chains[Math.floor(Math.random()*chains.length)];
+      const hrsAgo = i * 3 + Math.floor(Math.random()*3);
+      rows += `<tr>
+        <td>${id}</td>
+        <td>${short(h)}</td>
+        <td>${short(d)}</td>
+        <td>${collections[0]}</td>
+        <td><span class="chain-pill">${chain}</span></td>
+        <td>${hrsAgo}h ago</td>
+      </tr>`;
+    }
+    return rows;
+  }
+  document.getElementById('claimTable').innerHTML = buildRows(14);
+
+  document.getElementById('exportCsv').addEventListener('click', ()=> toast('Exporting claims as CSV…'));
+  document.getElementById('exportJson').addEventListener('click', ()=> toast('Exporting claims as JSON…'));
+
+  /* ---------------- prototype review panel ---------------- */
+  const protoToggle = document.getElementById('protoToggle');
+  const protoPanel = document.getElementById('protoPanel');
+  protoToggle.addEventListener('click', ()=> protoPanel.classList.toggle('open'));
+
+  document.querySelectorAll('[data-jump]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const j = btn.dataset.jump;
+      hideAdmin();
+      if (!connectedWallet){ connectedWallet = fakeAddr(); connectedWalletType = 'MetaMask'; }
+      if (!destinationWallet){ destinationWallet = fakeAddr(); }
+      renderNavAction();
+      switch(j){
+        case 'landing': connectedWallet = null; connectedWalletType = null; renderNavAction(); showLanding(); break;
+        case 'verifying-eligible': showVerifying(true); break;
+        case 'verifying-ineligible': showVerifying(false); break;
+        case 'eligible': showEligible(); break;
+        case 'ineligible': showIneligible(); break;
+        case 'destination': showDestination(); break;
+        case 'summary': showSummary(); break;
+        case 'success': showSuccess(); break;
+        case 'already': showAlreadyClaimed(); break;
+        case 'soldout': spotsRemaining = 0; showSoldOut(); break;
+        case 'admin': showAdmin(); break;
+      }
+      protoPanel.classList.remove('open');
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
