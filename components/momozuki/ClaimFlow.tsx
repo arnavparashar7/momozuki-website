@@ -307,7 +307,15 @@ export function ClaimFlow() {
               </div>
             </div>
             <div className="panel-actions">
-              <ConnectButton client={thirdwebClient} />
+              <ConnectButton
+                client={thirdwebClient}
+                appMetadata={{
+                  name: 'Momozuki Atelier',
+                  url: typeof window !== 'undefined' ? window.location.origin : 'https://momozuki.io',
+                  description: 'Momozuki NFT-Gated Companion Claim Platform',
+                  logoUrl: 'https://momozuki.io/favicon.ico',
+                }}
+              />
             </div>
           </div>
         )}
