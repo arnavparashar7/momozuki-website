@@ -72,9 +72,11 @@ async function executeBatch(chain: string, wallet: string, batch: PendingBatch) 
         pageKey,
       });
       for (const nft of res.ownedNfts) {
-        const addr = nft.contract.address.toLowerCase();
-        const current = results.get(addr) ?? 0;
-        results.set(addr, current + Number(nft.balance ?? '1'));
+        const addr = (nft.contractAddress || (nft as any).contract?.address || '').toLowerCase();
+        if (addr) {
+          const current = results.get(addr) ?? 0;
+          results.set(addr, current + Number(nft.balance ?? '1'));
+        }
       }
       pageKey = res.pageKey;
       pages += 1;
