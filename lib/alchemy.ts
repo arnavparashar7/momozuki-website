@@ -43,52 +43,113 @@ interface CacheEntry {
 const CACHE_TTL_MS = 30_000;
 const quantityCache = new Map<string, CacheEntry>();
 
+interface PendingBatch {
+  contractAddresses: Set<string>;
+  resolvers: Array<(results: Map<string, number>) => void>;
+  rejecters: Array<(err: unknown) => void>;
+  scheduled: boolean;
+}
+
+const pendingBatches = new Map<string, PendingBatch>();
+
+async function executeBatch(chain: string, wallet: string, batch: PendingBatch) {
+  const addresses = Array.from(batch.contractAddresses);
+  try {
+    const client = getAlchemyClient(chain);
+    const results = new Map<string, number>();
+    for (const addr of addresses) {
+      results.set(addr.toLowerCase(), 0);
+    }
+
+    const MAX_PAGES = 10;
+    let pageKey: string | undefined;
+    let pages = 0;
+
+    do {
+      const res = await client.nft.getNftsForOwner(wallet, {
+        contractAddresses: addresses,
+        omitMetadata: true,
+        pageKey,
+      });
+      for (const nft of res.ownedNfts) {
+        const addr = nft.contract.address.toLowerCase();
+        const current = results.get(addr) ?? 0;
+        results.set(addr, current + Number(nft.balance ?? '1'));
+      }
+      pageKey = res.pageKey;
+      pages += 1;
+    } while (pageKey && pages < MAX_PAGES);
+
+    // Cache all fetched results
+    const now = Date.now();
+    for (const [addr, total] of results.entries()) {
+      const cacheKey = `${chain}:${wallet.toLowerCase()}:${addr}`;
+      quantityCache.set(cacheKey, { value: total, expiresAt: now + CACHE_TTL_MS });
+    }
+
+    for (const resolve of batch.resolvers) {
+      resolve(results);
+    }
+  } catch (err) {
+    const error = err instanceof AppError ? err : new AppError(ErrorCode.PROVIDER_UNAVAILABLE);
+    for (const reject of batch.rejecters) {
+      reject(error);
+    }
+  }
+}
+
 /**
  * Total quantity of tokens `wallet` holds in `contractAddress` on `chain`.
  * Sums `balance` across all owned NFTs matching the contract, which is
  * correct for both ERC-721 (each entry has balance "1") and ERC-1155
- * (entries can have balance > 1). Paginates up to a safety cap - a
- * legitimate eligibility check should never need more than a handful of
- * pages; hitting the cap almost certainly indicates a misconfigured
- * contract address rather than a real collector, so we stop rather than
- * loop indefinitely.
+ * (entries can have balance > 1). Paginates up to a safety cap.
+ * Batches parallel calls for the same wallet into a single Alchemy API request.
  */
 export async function getHeldQuantity(
   chain: string,
   wallet: string,
   contractAddress: string,
 ): Promise<number> {
-  const cacheKey = `${chain}:${wallet}:${contractAddress}`;
+  const normalizedAddr = contractAddress.toLowerCase();
+  const cacheKey = `${chain}:${wallet.toLowerCase()}:${normalizedAddr}`;
   const cached = quantityCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.value;
   }
 
-  const client = getAlchemyClient(chain);
-  const MAX_PAGES = 10;
+  const batchKey = `${chain}:${wallet.toLowerCase()}`;
+  let batch = pendingBatches.get(batchKey);
 
-  let total = 0;
-  let pageKey: string | undefined;
-  let pages = 0;
-
-  try {
-    do {
-      const res = await client.nft.getNftsForOwner(wallet, {
-        contractAddresses: [contractAddress],
-        omitMetadata: true,
-        pageKey,
-      });
-      for (const nft of res.ownedNfts) {
-        total += Number(nft.balance ?? '1');
-      }
-      pageKey = res.pageKey;
-      pages += 1;
-    } while (pageKey && pages < MAX_PAGES);
-  } catch (err) {
-    if (err instanceof AppError) throw err;
-    throw new AppError(ErrorCode.PROVIDER_UNAVAILABLE);
+  if (!batch) {
+    batch = {
+      contractAddresses: new Set(),
+      resolvers: [],
+      rejecters: [],
+      scheduled: false,
+    };
+    pendingBatches.set(batchKey, batch);
   }
 
-  quantityCache.set(cacheKey, { value: total, expiresAt: Date.now() + CACHE_TTL_MS });
-  return total;
+  batch.contractAddresses.add(normalizedAddr);
+
+  const promise = new Promise<number>((resolve, reject) => {
+    batch!.resolvers.push((results) => {
+      resolve(results.get(normalizedAddr) ?? 0);
+    });
+    batch!.rejecters.push(reject);
+  });
+
+  if (!batch.scheduled) {
+    batch.scheduled = true;
+    Promise.resolve().then(() => {
+      const b = pendingBatches.get(batchKey);
+      if (b) {
+        pendingBatches.delete(batchKey);
+        executeBatch(chain, wallet, b);
+      }
+    });
+  }
+
+  return promise;
 }
+
